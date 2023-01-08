@@ -1,6 +1,6 @@
 This is an introductory programming problem for a deep learning course from Tinkoff.
 
-The code consists of two parts essentially: the Levenshtein distance and the ML.
+The code consists of essentially two parts: the Levenshtein distance and the ML.
 
 In the ML part I've fitted my model (gradient boosting on trees) for binary classification with following labels:
 
