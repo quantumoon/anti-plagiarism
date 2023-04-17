@@ -106,7 +106,7 @@ class LevenshteinDist():
         return int(now[n])
 
 
-    def _get_similarity(self, codes_pair):
+    def _get_similarity(self, codes_pair, weight_for_docs=0.25):
         """
         Finds how similar two Python codes are (using the Levenshtein distance)
 
@@ -122,7 +122,7 @@ class LevenshteinDist():
         code1, docs1 = self._get_code(path1)
         code2, docs2 = self._get_code(path2)
 
-        return 1 - (self.dist(code1, code2) + self.dist(docs1, docs2)) / (max(len(code1), len(code2)) + max(len(docs1), len(docs2)))
+        return 1 - self.dist(code1, code2) / max(len(code1), len(code2)) - weight_for_docs * self.dist(docs1, docs2) / max(len(docs1), len(docs2))
 
 
 def get_txts():
@@ -163,7 +163,7 @@ def get_prediction(codes_pair, clf):
     X_test = np.array(X_test).reshape(2, 7)
     preds = clf.predict_proba(X_test)
     
-    return np.sqrt(preds[0][1] * preds[1][0])
+    return preds[0][0] * preds[1][1] + preds[0][1] * preds[1][0]
 
 
 def main():
