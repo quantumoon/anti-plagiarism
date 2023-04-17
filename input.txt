@@ -4,3 +4,4 @@ files/lossy.py files/lossy.py
 files/arima.py plagiat2/arima.py
 files/base.py plagiat1/base.py
 files/base.py files/arima.py
+plagiat1/rnn.py plagiat2/rnn.py
