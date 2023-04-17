@@ -3,8 +3,19 @@ import argparse
 import os
 import pickle
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
+from time import time
 from xgboost import XGBClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_auc_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import KNeighborsClassifier
+
+sns.set_theme(style="dark")
 
 
 class GetFeatures(ast.NodeVisitor):
@@ -14,7 +25,7 @@ class GetFeatures(ast.NodeVisitor):
     Features : number of functions, total length of all function documentations (docs),
                total length of all class docs, total length of all class names,
                total length of all function names, max depth of conditions & cycles in the code
-               and average density
+               and average density of the string
     """
 
 
@@ -141,10 +152,37 @@ def main():
     X, y = np.array(X), np.array(y)
     X = X.reshape(y.shape[0], 7)
 
-    model = XGBClassifier(n_estimators=15, max_depth=7, random_state=42)
-    model.fit(X, y)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.8, random_state=42, shuffle=True)
 
-    pickle.dump(model, open(dirs.model, "wb"))
+#    scaler = StandardScaler()
+
+#    X_train = scaler.fit_transform(X_train, y_train)
+#    X_test = scaler.transform(X_test)
+
+    models = [RandomForestClassifier(n_estimators=10, max_depth=5, random_state=42), XGBClassifier(n_estimators=14, max_depth=5, random_state=42), GradientBoostingClassifier(n_estimators=14, max_depth=5, random_state=42), KNeighborsClassifier(16, p=2)]
+    model_names = ["Random Forest", "XGBoost", "GradientBoosting", "KNeighbours"]
+    fig, axs = plt.subplots(2, 2, figsize=(16, 9), sharey=True, layout="constrained")
+    axs[0][0].set_ylabel("False Positive Rate, FPR")
+    axs[1][0].set_ylabel("False Positive Rate, FPR")
+    for i, model in enumerate(models):
+        start = time()
+        model.fit(X_train, y_train)
+        stop = time()
+        y_pred = model.predict_proba(X_test)[:,1]
+
+        fpr_test, tpr_test, _ = roc_curve(y_test, y_pred)
+        fpr_train, tpr_train, _ = roc_curve(y_train, model.predict_proba(X_train)[:,1])
+
+        axs[i // 2, i % 2].plot(fpr_test, tpr_test, linewidth=2, label=f"test data\nROC_AUC={round(roc_auc_score(y_test, y_pred), 4)}")
+        axs[i // 2, i % 2].plot(fpr_train, tpr_train, linewidth=2, label=f"train data\nROC_AUC={round(roc_auc_score(y_train, model.predict_proba(X_train)[:,1]), 4)}")
+        axs[i // 2, i % 2].text(x=0.9, y=0.3, s=f"Fitting time = {round((stop - start) * 1000, 2)} ms", ha="center", va="center", bbox=dict(boxstyle="round", ec=(1., 0.5, 0.5), fc=(1., 0.8, 0.8),))
+        axs[i // 2, i % 2].set_xlabel("True Positive Rate, TPR")
+        axs[i // 2, i % 2].plot([0, 1], [0, 1], 'k--')
+        axs[i // 2, i % 2].grid(True)
+        axs[i // 2, i % 2].legend(loc="lower right")
+        axs[i // 2, i % 2].set_title(f'ROC curve for {model_names[i]}')
+    plt.savefig("ROC.png")
+    pickle.dump(models[1], open(dirs.model, "wb"))
 
 
 if __name__ == "__main__":
